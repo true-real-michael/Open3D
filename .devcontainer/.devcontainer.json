@@ -1,0 +1,6 @@
+{
+  "name": "cpp-con",
+  "build": {
+    "dockerfile": "Dockerfile"
+  }
+}
