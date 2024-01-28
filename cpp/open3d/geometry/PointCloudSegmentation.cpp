@@ -184,7 +184,9 @@ std::tuple<Eigen::Vector4d, std::vector<size_t>> PointCloud::SegmentPlane(
 #ifdef NDEBUG
 #pragma omp parallel for schedule(static)
 #else
-    utility::Logger::GetInstance().SetPrintToFile(std::getenv("LOGFILE"));
+    if (std::getenv("LOGFILE") != nullptr) {
+        utility::Logger::GetInstance().SetPrintToFile(std::getenv("LOGFILE"));
+    }
     auto previousVerbosityLevel =
             utility::Logger::GetInstance().GetVerbosityLevel();
     utility::Logger::GetInstance().SetVerbosityLevel(
