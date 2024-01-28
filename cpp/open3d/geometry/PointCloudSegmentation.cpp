@@ -181,7 +181,18 @@ std::tuple<Eigen::Vector4d, std::vector<size_t>> PointCloud::SegmentPlane(
     size_t break_iteration = std::numeric_limits<size_t>::max();
     int iteration_count = 0;
 
+#ifdef NDEBUG
 #pragma omp parallel for schedule(static)
+#else
+    utility::Logger::GetInstance().SetPrintToFile(std::getenv("LOGFILE"));
+    auto previousVerbosityLevel =
+            utility::Logger::GetInstance().GetVerbosityLevel();
+    utility::Logger::GetInstance().SetVerbosityLevel(
+            utility::VerbosityLevel::Debug);
+    utility::LogDebug(
+            "iter, break_iter, num_iter, fitness, rmse, inliers, points");
+#endif
+
     for (int itr = 0; itr < num_iterations; itr++) {
         if ((size_t)iteration_count > break_iteration) {
             continue;
@@ -205,10 +216,14 @@ std::tuple<Eigen::Vector4d, std::vector<size_t>> PointCloud::SegmentPlane(
             continue;
         }
 
+        size_t num_inliers = inliers.size();
+
         inliers.clear();
         auto this_result = EvaluateRANSACBasedOnDistance(
                 points_, plane_model, inliers, distance_threshold);
+#ifdef NDEBUG
 #pragma omp critical
+#endif
         {
             if (this_result.fitness_ > result.fitness_ ||
                 (this_result.fitness_ == result.fitness_ &&
@@ -220,6 +235,10 @@ std::tuple<Eigen::Vector4d, std::vector<size_t>> PointCloud::SegmentPlane(
                             log(1 - probability) /
                                     log(1 - pow(result.fitness_, ransac_n)),
                             (double)num_iterations);
+                    utility::LogDebug("{}, {}, {}, {}, {}, {}, {}", itr,
+                                      break_iteration, num_iterations,
+                                      result.fitness_, result.inlier_rmse_,
+                                      num_inliers, num_points);
                 } else {
                     // Set break_iteration to 0 to force to break the loop.
                     break_iteration = 0;
@@ -246,11 +265,18 @@ std::tuple<Eigen::Vector4d, std::vector<size_t>> PointCloud::SegmentPlane(
     // Improve best_plane_model using the final inliers.
     best_plane_model = GetPlaneFromPoints(points_, final_inliers);
 
+    utility::LogDebug("{}, {}, {}, {}, {}, {}, {}", iteration_count,
+                      break_iteration, num_iterations, result.fitness_,
+                      result.inlier_rmse_, final_inliers.size(), num_points);
     utility::LogDebug(
             "RANSAC | Inliers: {:d}, Fitness: {:e}, RMSE: {:e}, Iteration: "
-            "{:d}",
+            "{:d}\n",
             final_inliers.size(), result.fitness_, result.inlier_rmse_,
             iteration_count);
+#ifndef NDEBUG
+    utility::Logger::GetInstance().ResetPrintFunction();
+    utility::Logger::GetInstance().SetVerbosityLevel(previousVerbosityLevel);
+#endif
     return std::make_tuple(best_plane_model, final_inliers);
 }
 

@@ -11,6 +11,7 @@
 #include <fmt/printf.h>
 #include <fmt/ranges.h>
 
+#include <fstream>
 #include <functional>
 #include <iostream>
 #include <sstream>
@@ -36,6 +37,17 @@ struct Logger::Impl {
 
     // The default print function (that prints to console).
     static std::function<void(const std::string &)> console_print_fcn_;
+
+    // The print function that prints to file.
+    static std::function<void(const std::string &path)> GetFilePrintFunction(
+            const std::string &path) {
+
+        return [path](const std::string &msg) {
+            std::ofstream file(path, std::ios::app);
+            file << msg << std::endl;
+            file.close();
+        };
+    }
 
     // Verbosity level.
     VerbosityLevel verbosity_level_;
@@ -119,6 +131,10 @@ const std::function<void(const std::string &)> Logger::GetPrintFunction() {
 
 void Logger::ResetPrintFunction() {
     impl_->print_fcn_ = impl_->console_print_fcn_;
+}
+
+void Logger::SetPrintToFile(const std::string &path) {
+    impl_->print_fcn_ = impl_->GetFilePrintFunction(path);
 }
 
 void Logger::SetVerbosityLevel(VerbosityLevel verbosity_level) {

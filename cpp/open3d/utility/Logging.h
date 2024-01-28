@@ -123,6 +123,8 @@ public:
     /// Reset the print function to the default one (print to console).
     void ResetPrintFunction();
 
+    void SetPrintToFile(const std::string &);
+
     /// Get the print function used by the Logger.
     const std::function<void(const std::string &)> GetPrintFunction();
 
